@@ -103,7 +103,9 @@ class SvGetAssetPropertiesMK2(SverchCustomTreeNode, bpy.types.Node):
     pass_pixels: bpy.props.BoolProperty(update=updateNode)
 
     # GP props
-    gp_pointer: PointerProperty(type=bpy.types.GreasePencil, poll=lambda s, o: True, update=updateNode)
+    # gp_pointer: PointerProperty(type=bpy.types.GreasePencil, poll=lambda s, o: True, update=updateNode)
+    # gp_pointer: PointerProperty(type=bpy.types.Object, poll=lambda s, o: getattr(o, 'type', None) == 'GREASEPENCIL' if hasattr(bpy.types, 'GreasePencil') else False, update=updateNode)
+    gp_pointer: PointerProperty(type=getattr(bpy.types, 'GreasePencil', bpy.types.Object), poll=lambda s, o: True, update=updateNode) if hasattr(bpy.types, 'GreasePencil') else None
     # i can't get this to work. so am revering to StringProperty for gp_layer.
     # gp_layer_pointer: PointerProperty(type=bpy.types.GreasePencilLayers, poll=lambda s, o: True, update=updateNode) # <---- no?
     gp_layer: bpy.props.StringProperty(update=updateNode)

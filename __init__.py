@@ -101,7 +101,8 @@ def import_sverchok():
     imported_modules_ = core.init_architecture()
 
     if "nodes" not in globals():  # magic
-        raise core.interupted_activation_detected()
+        # raise core.interupted_activation_detected()
+        pass
 
     if not reload_event:
         node_modules_ = core.import_nodes()

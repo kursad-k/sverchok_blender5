@@ -719,7 +719,7 @@ class BPYPointers(Enum):
     IMAGE = bpy.types.Image
     TEXTURE = bpy.types.Texture
     VECTOR_FONT = bpy.types.VectorFont
-    GREASE_PENCIL = bpy.types.GreasePencil
+    GREASE_PENCIL =  getattr(bpy.types, 'GreasePencil', None)
 
     @property
     def collection(self):
