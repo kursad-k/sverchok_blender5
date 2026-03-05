@@ -218,6 +218,14 @@ try:
 except ImportError:
     pySVCGAL = None 
 
+spyrrow_d = sv_dependencies["spyrrow"] = SvDependency("Spyrrow","https://github.com/PaulDL-RS/spyrrow")
+spyrrow_d.pip_installable = True
+try:
+    import spyrrow
+    spyrrow_d.module = spyrrow
+except ImportError:
+    spyrrow = None 
+
 settings.pip = pip
 settings.sv_dependencies = sv_dependencies
 settings.ensurepip = ensurepip
@@ -237,7 +245,7 @@ class DI_OT_install_or_update_dependencies_operator(bpy.types.Operator):
         for item in items:
             try:
                 dependency = sv_dependencies[item]
-                if dependency.module is None and dependency.pip_installable and pip is not None:
+                if dependency.module is None and dependency.pip_installable and pip is not None and item != 'pyOpenSubdiv':
                     print(f"===>> Install Dependency: {item}")
                     res = bpy.ops.node.sv_ex_pip_install(package = dependency.package)
                     #res = bpy.ops.node.sv_ex_pip_install('INVOKE_DEFAULT', package = dependency.package)

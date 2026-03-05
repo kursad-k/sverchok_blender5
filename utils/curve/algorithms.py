@@ -172,23 +172,31 @@ class SvNormalTrack(object):
         ts = np.array(ts)
         tknots, quats = self.tknots, self.quats
         base_indexes = tknots.searchsorted(ts, side='left')-1
-        t1s, t2s = tknots[base_indexes], tknots[base_indexes+1]
-        dts = (ts - t1s) / (t2s - t1s)
+        shifted_indexes = base_indexes + 1
+        good = shifted_indexes < len(tknots)
+        shifted_indexes[np.logical_not(good)] = len(tknots) - 1
+        t1s, t2s = tknots[base_indexes], tknots[shifted_indexes]
+        dts = np.empty_like(ts)
+        dts[good] = (ts[good] - t1s[good]) / (t2s[good] - t1s[good])
+        dts[np.logical_not(good)] = 0
         #dts = np.clip(dts, 0.0, 1.0) # Just in case...
         matrix_out = []
         # TODO: ideally this should be vectorized with numpy;
         # but that would require implementation of quaternion
         # interpolation in numpy.
         for dt, base_index in zip(dts, base_indexes):
-            q1, q2 = quats[base_index], quats[base_index+1]
-            # spherical linear interpolation.
-            # TODO: implement `squad`.
-            if dt < 0:
-                q = q1
-            elif dt > 1.0:
-                q = q2
+            if base_index+1 < len(quats):
+                q1, q2 = quats[base_index], quats[base_index+1]
+                # spherical linear interpolation.
+                # TODO: implement `squad`.
+                if dt < 0:
+                    q = q1
+                elif dt > 1.0:
+                    q = q2
+                else:
+                    q = q1.slerp(q2, dt)
             else:
-                q = q1.slerp(q2, dt)
+                q = quats[base_index]
             matrix = np.array(q.to_matrix())
             matrix_out.append(matrix)
         return np.array(matrix_out)
@@ -451,6 +459,7 @@ class SvOffsetCurve(SvCurve):
     BY_LENGTH = 'L'
 
     def __init__(self, curve, offset_vector,
+                    plane_normal = None,
                     offset_amount=None,
                     offset_curve = None, offset_curve_type = BY_PARAMETER,
                     algorithm=FRENET, resolution=50):
@@ -459,6 +468,10 @@ class SvOffsetCurve(SvCurve):
             raise ArgumentError("offset_amount or offset_curve is mandatory if algorithm is NORMAL_DIR")
         self.offset_amount = offset_amount
         self.offset_vector = offset_vector
+        if plane_normal is None:
+            self.plane_normal = offset_vector
+        else:
+            self.plane_normal = plane_normal
         self.offset_curve = offset_curve
         self.offset_curve_type = offset_curve_type
         self.algorithm = algorithm
@@ -484,6 +497,9 @@ class SvOffsetCurve(SvCurve):
     def get_matrices(self, ts):
         if self.algorithm in {FRENET, ZERO, TRACK_NORMAL}:
             return self.calculator.get_matrices(ts)
+        elif self.algorithm == NORMAL_DIR:
+            matrices, _, _ = self.curve.frame_by_plane_array(ts, self.plane_normal)
+            return matrices
         elif self.algorithm in {HOUSEHOLDER, TRACK, DIFF}:
             tangents = self.curve.tangent_array(ts)
             matrices = np.vectorize(lambda t : self.get_matrix(t), signature='(3)->(3,3)')(tangents)
@@ -516,19 +532,13 @@ class SvOffsetCurve(SvCurve):
         extrusion_start = self.curve.evaluate(t_min)
         extrusion_points = self.curve.evaluate_array(ts)
         extrusion_vectors = extrusion_points - extrusion_start
-        offset_vector = self.offset_vector / np.linalg.norm(self.offset_vector)
-        if self.algorithm == NORMAL_DIR:
-            offset_vectors = np.tile(offset_vector[np.newaxis].T, n).T
-            tangents = self.curve.tangent_array(ts)
-            offset_vectors = np.cross(tangents, offset_vectors)
-            offset_norm = np.linalg.norm(offset_vectors, axis=1, keepdims=True)
-            offset_amounts = self.get_offset(ts)
-            offset_vectors = offset_amounts * offset_vectors / offset_norm
-        else:
-            offset_vectors = np.tile(offset_vector[np.newaxis].T, n)
-            matrices = self.get_matrices(ts)
-            offset_amounts = self.get_offset(ts)
-            offset_vectors = offset_amounts * (matrices @ offset_vectors)[:,:,0]
+        offset_vector = self.offset_vector
+
+        offset_vectors = np.tile(offset_vector[np.newaxis].T, n)
+        matrices = self.get_matrices(ts)
+        offset_amounts = self.get_offset(ts)
+        offset_vectors = offset_amounts * (matrices @ offset_vectors)[:,:,0]
+
         result = extrusion_vectors + offset_vectors
         result = result + extrusion_start
         return result

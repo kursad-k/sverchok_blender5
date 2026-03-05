@@ -588,6 +588,8 @@ class SverchokPreferences(AddonPreferences):
         row_x1.prop(self, "no_data_color", text='')
 
         col_x2 = split_extra_colors.split().column()
+        col_x2.label(text='Blender interface themechanger')
+        col_x2.operator('sverchok.apply_theme', text='Apply Sverchok theme to BLENDER')
 
         col3 = right_split.column()
         col3.label(text='Theme:')
@@ -626,7 +628,8 @@ dependencies, or install only some of them.""")
 
         box = layout.box()
         box.label(text="Dependencies:")
-        package_names = ["scipy", "geomdl", "skimage", "mcubes", "circlify", "cython", "numba", "pyOpenSubdiv", "numexpr", "ezdxf", "pyacvd", "pyQuadriFlow", "pySVCGAL", ]
+        # please, not activate pyOpenSubdiv and pyQuadriFlow it crashes sverchok sometimes
+        package_names = ["scipy", "geomdl", "skimage", "mcubes", "circlify", "cython", "numba", "numexpr", "ezdxf", "pyacvd", "pySVCGAL", "spyrrow"]
         col = box.column(align=True)
         row = col.row(align=True)
         row.operator('sverchok.install_or_update_dependencies_operator', text="Install or Update all packages (Upgrade PIP FIRST)").serialized_items=";".join(package_names)
