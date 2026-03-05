@@ -535,7 +535,9 @@ class SvScriptNodeLite(SverchCustomTreeNode, bpy.types.Node):
                 if not self.socket_requirements_met(socket_info):
                     return
 
-            exec(self.script_str, locals(), locals())
+            _local_out = {}
+            exec(self.script_str, exec_dict, _local_out)
+            exec_dict.update(_local_out) 
 
             for idx, _socket in enumerate(self.outputs):
                 vals = locals()[_socket.name]
